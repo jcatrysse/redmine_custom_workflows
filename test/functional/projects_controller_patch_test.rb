@@ -38,4 +38,25 @@ class ProjectsControllerPatchTest < RedmineCustomWorkflows::Test::TestCase
     assert_redirected_to settings_project_path(@project1)
     assert_equal request.remote_ip, @controller.flash[:warning]
   end
+
+  def test_settings_tab_comes_back_to_itself
+    Role.find(1).add_permission! :manage_project_workflow
+    get "/projects/#{@project1.id}/settings/custom_workflows"
+    assert_response :success
+    assert_select '#tab-content-custom_workflows input[name=tab][value=custom_workflows]'
+    patch "/projects/#{@project1.id}",
+          params: { tab: 'custom_workflows', project: { custom_workflow_ids: ['', '1'] } }
+    assert_redirected_to settings_project_path(@project1, 'custom_workflows')
+    assert_equal [1], @project1.reload.custom_workflow_ids
+  end
+
+  def test_custom_workflow_ids_ignored_without_permission
+    Role.find(1).remove_permission! :manage_project_workflow
+    ids = @project1.custom_workflow_ids
+    get "/projects/#{@project1.id}/settings"
+    assert_select '#tab-custom_workflows', 0
+    patch "/projects/#{@project1.id}", params: { project: { custom_workflow_ids: [''] } }
+    assert_redirected_to settings_project_path(@project1)
+    assert_equal ids, @project1.reload.custom_workflow_ids
+  end
 end
