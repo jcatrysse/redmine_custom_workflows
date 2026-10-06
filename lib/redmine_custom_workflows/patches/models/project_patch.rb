@@ -80,8 +80,7 @@ module RedmineCustomWorkflows
         end
 
         def after_save_custom_workflows
-          res = CustomWorkflow.run_custom_workflows?(:project, self, :after_save)
-          throw :abort if res == false
+          CustomWorkflow.run_custom_workflows?(:project, self, :after_save)
         end
 
         def before_destroy_custom_workflows
@@ -90,8 +89,7 @@ module RedmineCustomWorkflows
         end
 
         def after_destroy_custom_workflows
-          res = CustomWorkflow.run_custom_workflows?(:project, self, :after_destroy)
-          throw :abort if res == false
+          CustomWorkflow.run_custom_workflows?(:project, self, :after_destroy)
         end
       end
     end

@@ -41,6 +41,14 @@ class IssuesControllerPatchTest < RedmineCustomWorkflows::Test::TestCase
     assert Issue.find_by(id: @issue1.id)
   end
 
+  def test_update_with_failing_after_save_cw
+    CustomWorkflow.find(1).update_column :after_save,
+                                         "raise RedmineCustomWorkflows::Errors::WorkflowError, 'after_save failed'"
+    put "/issues/#{@issue1.id}", params: { issue: { subject: 'Updated subject' } }
+    assert_redirected_to issue_path(@issue1)
+    assert_equal 'Updated subject', @issue1.reload.subject
+  end
+
   def test_cw_env
     put "/issues/#{@issue1.id}", params: { issue: { subject: 'Updated subject' } }
     assert_redirected_to issue_path(@issue1)
