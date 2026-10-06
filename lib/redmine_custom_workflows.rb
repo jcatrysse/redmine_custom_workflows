@@ -23,6 +23,9 @@ require "#{File.dirname(__FILE__)}/redmine_custom_workflows/hooks/views/base_vie
 # Errors
 require "#{File.dirname(__FILE__)}/redmine_custom_workflows/errors/workflow_error"
 
+# Script audit
+require "#{File.dirname(__FILE__)}/redmine_custom_workflows/script_audit"
+
 # Patches
 
 # Models

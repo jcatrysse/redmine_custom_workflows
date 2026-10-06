@@ -79,6 +79,13 @@ chown -R www-data:www-data plugins/redmine_custom_workflows
 systemctl restart apache2
 ```
 
+After an upgrade of Ruby, Rails or Redmine, list the stored scripts that use code removed in Ruby 3.3 / Rails 8.1
+(read-only, the scripts are parsed, not run):
+
+```shell
+bundle exec rake redmine:custom_workflows:audit RAILS_ENV=production
+```
+
 Configuration
 -------------
 
