@@ -4,19 +4,18 @@
 #
 # Anton Argirov, Karel Pičman <karel.picman@kontron.com>
 #
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
+# This file is part of Redmine OAuth plugin.
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# Redmine Custom Workflows plugin is free software: you can redistribute it and/or modify it under the terms of the GNU
+# General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
+#  option) any later version.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# Redmine Custom Workflows plugin is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
+#
+# You should have received a copy of the GNU General Public License along with Redmine Custom Workflows plugin. If not,
+# see <https://www.gnu.org/licenses/>.
 
 require 'mailer'
 
@@ -40,7 +39,7 @@ class CustomWorkflowMailer < Mailer
         format.html { render plain: html_body } if html_body.present? && !Setting.plain_text_mail?
       end
     elsif template_name
-      template_params.each { |k, v| instance_variable_set("@#{k}", v) }
+      template_params.each { |k, v| instance_variable_set(:"@#{k}", v) }
       mail headers do |format|
         format.text { render template_name }
         format.html { render template_name } unless Setting.plain_text_mail?

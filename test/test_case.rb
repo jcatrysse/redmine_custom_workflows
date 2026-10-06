@@ -4,40 +4,32 @@
 #
 # Anton Argirov, Karel Pičman <karel.picman@kontron.com>
 #
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
+# This file is part of Redmine OAuth plugin.
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# Redmine Custom Workflows plugin is free software: you can redistribute it and/or modify it under the terms of the GNU
+# General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
+#  option) any later version.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# Redmine Custom Workflows plugin is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
+#
+# You should have received a copy of the GNU General Public License along with Redmine Custom Workflows plugin. If not,
+# see <https://www.gnu.org/licenses/>.
 
 module RedmineCustomWorkflows
   module Test
     # Test case base class
     class TestCase < ActionDispatch::IntegrationTest
-      fixtures :users, :email_addresses, :projects
-
-      # Allow us to override the fixtures method to implement fixtures for our plugin.
-      # Ultimately it allows for better integration without blowing redmine fixtures up,
-      # and allowing us to suppliment redmine fixtures if we need to.
-      def self.fixtures(*table_names)
+      def initialize(name)
+        super
+        # Load all plugin's fixtures
         dir = File.join(File.dirname(__FILE__), 'fixtures')
-        redmine_table_names = []
-        table_names.each do |x|
-          if File.exist?(File.join(dir, "#{x}.yml"))
-            ActiveRecord::FixtureSet.create_fixtures(dir, x)
-          else
-            redmine_table_names << x
-          end
+        ext = '.yml'
+        Dir.glob("#{dir}/**/*#{ext}").each do |file|
+          fixture = File.basename(file, ext)
+          ActiveRecord::FixtureSet.create_fixtures dir, fixture
         end
-        super redmine_table_names if redmine_table_names.any?
       end
 
       def setup

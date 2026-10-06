@@ -1,7 +1,6 @@
-Custom Workflows plug-in 2.1.3 devel
-====================================
+# Custom Workflows plug-in 3.1.1
 
-[![GitHub CI](https://github.com/anteo/redmine_custom_workflows/actions/workflows/rubyonrails.yml/badge.svg?branch=devel)](https://github.com/anteo/redmine_custom_workflows/actions/workflows/rubyonrails.yml)
+[![GitHub CI](https://github.com/anteo/redmine_custom_workflows/actions/workflows/rubyonrails.yml/badge.svg?branch=master)](https://github.com/anteo/redmine_custom_workflows/actions/workflows/rubyonrails.yml)
 [![Support Ukraine Badge](https://bit.ly/support-ukraine-now)](https://github.com/support-ukraine/support-ukraine)
 
 This plug-in provides a great functionality for those who is familiar with the Ruby language.
@@ -75,7 +74,8 @@ After download:
 ```shell
 cd redmine
 bundle install
-RAILS_ENV=production bundle exec rake redmine:plugins:migrate NAME=redmine_custom_workflows
+bundle exec rake redmine:plugins:migrate NAME=redmine_custom_workflows RAILS_ENV=production
+chown -R www-data:www-data plugins/redmine_custom_workflows
 systemctl restart apache2
 ```
 
@@ -201,4 +201,11 @@ fall into infinite loop.
 Compatibility
 -------------
 
-This plug-in is compatible with Redmine 4.1.x., 4.2.x. and 5.0.x.
+This plugin requires **Redmine 6.x** to function properly. Ensure that your Redmine installation is up-to-date before proceeding with the installation.
+
+If you are using an older version of Redmine, please check the available plugin releases:  
+👉 [Redmine Custom Workflows Releases](https://github.com/anteo/redmine_custom_workflows/releases)  
+
+**Note:**  
+When downloading the plugin from a ZIP file, ensure that the extracted folder does **not** contain version numbers in its name (e.g., `redmine_custom_workflows-3.0.0`). Rename the folder to just `redmine_custom_workflows` before proceeding with the installation to avoid any compatibility issues.
+

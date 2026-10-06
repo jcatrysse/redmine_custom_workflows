@@ -4,19 +4,21 @@
 #
 # Anton Argirov, Karel Pičman <karel.picman@kontron.com>
 #
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
+# This file is part of Redmine OAuth plugin.
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# Redmine Custom Workflows plugin is free software: you can redistribute it and/or modify it under the terms of the GNU
+# General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your
+#  option) any later version.
 #
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+# Redmine Custom Workflows plugin is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+# for more details.
+#
+# You should have received a copy of the GNU General Public License along with Redmine Custom Workflows plugin. If not,
+# see <https://www.gnu.org/licenses/>.
+
+require 'redmine'
+require "#{File.dirname(__FILE__)}/lib/redmine_custom_workflows"
 
 Redmine::Plugin.register :redmine_custom_workflows do
   name 'Redmine Custom Workflow plugin'
@@ -24,11 +26,16 @@ Redmine::Plugin.register :redmine_custom_workflows do
   author_url 'https://github.com/anteo/redmine_custom_workflows/graphs/contributors'
   author 'Anton Argirov/Karel Pičman'
   description 'It allows to create custom workflows for objects, defined in a plain Ruby language'
-  version '2.1.3 devel'
+  version '3.1.1'
 
-  requires_redmine version_or_higher: '4.1.0'
+  requires_redmine version_or_higher: '6.0.0'
 
   permission :manage_project_workflow, {}, require: :member
 end
 
-require_relative 'after_init' unless Redmine::Plugin.installed?('easy_extensions')
+# Administration menu extension
+Redmine::MenuManager.map :admin_menu do |menu|
+  menu.push :custom_workflows, { controller: 'custom_workflows', action: 'index' },
+            caption: :label_custom_workflow_plural, icon: 'workflows',
+            html: { class: 'icon icon-workflows workflows' }
+end
