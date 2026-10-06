@@ -69,9 +69,9 @@ await note([
 ]);
 await t.shot('webhooks', 'Webhooks follow the workflows: the payload has the value set by before_save, a refused save sends nothing');
 
-await t.login('admin');
 await t.go('/webhooks');
-await t.shot('webhook-config', 'The webhook used (core Redmine 7, set up by the seed for the manager)', { full: false });
+if (!(await p().locator('#content table', { hasText: ':3999/hook' }).count())) t.problems.push('webhook list: hook not shown');
+await t.shot('webhook-config', 'The manager\'s webhook used here (core Redmine 7, created by the seed; webhooks belong to a user)', { full: false });
 
 server.close();
 await t.done();

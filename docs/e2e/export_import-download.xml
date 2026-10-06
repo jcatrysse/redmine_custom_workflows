@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hash>
+  <id type="integer">15</id>
+  <before-save>if relation_type == 'blocks'
+  raise RedmineCustomWorkflows::Errors::WorkflowError, 'E2E: blocks relations are refused'
+end
+self.custom_workflow_messages[:notice] = 'E2E: issue relation custom workflow ran'
+</before-save>
+  <created-at type="dateTime">2026-10-06T20:00:17Z</created-at>
+  <updated-at type="dateTime">2026-10-06T20:01:03Z</updated-at>
+  <name>E2E issue relation</name>
+  <description>E2E issue relation, for the end-to-end scenarios.</description>
+  <string></string>
+  <position type="integer">16</position>
+  <integer type="integer">1</integer>
+  <after-save nil="true"/>
+  <is-for-all type="boolean">true</is-for-all>
+  <author>admin@example.net</author>
+  <active type="boolean">true</active>
+  <observable>issue_relation</observable>
+  <shared-code nil="true"/>
+  <before-add nil="true"/>
+  <after-add nil="true"/>
+  <before-remove nil="true"/>
+  <after-remove nil="true"/>
+  <before-destroy nil="true"/>
+  <after-destroy nil="true"/>
+  <exported-at>2026-10-06T20:01:37Z</exported-at>
+  <plugin-version>3.1.1</plugin-version>
+  <ruby-version>3.3.6-p108</ruby-version>
+  <rails-version>8.1.3.1</rails-version>
+</hash>

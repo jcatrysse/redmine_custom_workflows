@@ -46,6 +46,21 @@ await t.shot('after-save-fails', 'A WorkflowError in after_save no longer gives 
 const s2 = await edit(2, 'E2E unassigned issue [after-crash]', 'after-crash');
 if (s2 !== 200 || !(await subjectOf(2)).subject.includes('[after-crash]')) t.problems.push(`[after-crash]: HTTP ${s2}`);
 await t.shot('after-save-crashes', 'A runtime error in after_save is logged; the issue is saved and the user sees the normal page');
+
+// Bulk update through the context menu: the controller patch handles @issues too
+await edit(2, 'E2E unassigned issue [env]', 'env for bulk');
+await t.go('/projects/e2e-project/issues?set_filter=1&issue_id=2');
+await p().click('table.issues tr#issue-2 td.status', { button: 'right' });
+await p().waitForSelector('#context-menu a:has-text("Priority")');
+await p().hover('#context-menu a:has-text("Priority")');
+await Promise.all([p().waitForNavigation(), p().click('#context-menu li.folder:has(a:has-text("Priority")) ul a:has-text("High")')]);
+await t.settle();
+t.check('bulk update');
+if (!/remote IP 127\.0\.0\.1/.test(await flash('warning'))) t.problems.push(`bulk: warning "${await flash('warning')}"`);
+if ((await subjectOf(2)).priority.name !== 'High') t.problems.push('bulk: priority not changed');
+await t.shot('bulk-update', 'Context menu bulk update (priority High): the workflow runs per issue and its message is shown');
+await p().request.put(`${t.BASE}/issues/2.json`, { headers: { ...auth('admin'), 'Content-Type': 'application/json' },
+  data: { issue: { priority_id: (await subjectOf(1)).priority.id } } });
 await edit(2, 'E2E unassigned issue', 'reset');
 
 // REST API
