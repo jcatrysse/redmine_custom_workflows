@@ -23,7 +23,7 @@ what is left. Written 2026-10-06 from a measured analysis (report at the bottom)
 | After sync | DEELS |
 | Complexity (1 trivial .. 5 rewrite) | 2 |
 | Measured on | Redmine 7.0.1 (7.0-stable-GEOxyz + latest 7.0-stable), Rails 8.1.3.1, Ruby 3.3.6, PostgreSQL 16 and MariaDB 10.11 |
-| Branch head when this file was written | `17d6837` |
+| Branch head when this file was written | `d5a7e04` |
 
 ## Already on this branch
 
@@ -37,7 +37,7 @@ In this order: things that break, security, the GEOxyz changes, the open items, 
 
 1. Decide on the upstream 3.1 behaviour change: a failing after_save/after_destroy script now raises (HTTP 500, rollback) where 5.x only logged it.
 
-**Open items from the analysis** (Dutch; where they repeat a priority item, the priority item wins)
+**Open items from the analysis** (Dutch; where they conflict with a decision or a priority item above, those win)
 
 2. Audit the custom workflow scripts stored in the production DB for Rails 8/Ruby 3.3 breakers before upgrading (to_s(:db), update_attributes, File.exists?, errors[:x] <<, URI.escape)
 3. Upstream 3.1.0 added throw :abort in after_save/after_destroy callbacks: a failing after_save/after_destroy script now raises UncaughtThrowError -> HTTP 500 + rollback (measured, issue_patch.rb:90); decide keep / revert locally / report upstream; move any 'raise WorkflowError' from after_save to before_save
@@ -172,7 +172,9 @@ results quoted in the analysis come from it.
 - **5.1 compatibility**: prefer fixes that also run on Redmine 5.1 so they can be merged early;
   say so when a fix cannot.
 - **Git**: work on `redmine70-migration` only; never push to the default branch; never force-push
-  a branch someone else uses. Descriptive commit messages (what and why).
+  a branch someone else uses. Descriptive commit messages (what and why). Push after every
+  commit, together with the updated status in this file: a cloud session can stop at a usage
+  limit, and work that is not pushed is lost with its container.
 - **GitHub Actions**: manual only (`workflow_dispatch`). Do not add push, pull_request or schedule
   triggers.
 
