@@ -8,9 +8,11 @@ User.current = User.find_by(login: 'admin')
 CustomWorkflow.where("name LIKE 'E2E %'").destroy_all
 
 def refuse(field, what)
-  "if #{field}.to_s.include?('[refuse]')\n" \
-    "  raise RedmineCustomWorkflows::Errors::WorkflowError, 'E2E: #{what} with [refuse] is refused by a custom workflow'\n" \
-    "end\n"
+  <<~RUBY
+    if #{field}.to_s.include?('[refuse]')
+      raise RedmineCustomWorkflows::Errors::WorkflowError, 'E2E: #{what} with [refuse] is refused by a custom workflow'
+    end
+  RUBY
 end
 
 def notice(what)
@@ -27,55 +29,83 @@ def e2e_workflow(name, observable, is_for_all: true, active: true, **scripts)
   workflow
 end
 
-e2e_workflow 'E2E shared code', 'shared', shared_code: "def e2e_shared_tag\n  ' [shared]'\nend\n"
+e2e_workflow 'E2E shared code', 'shared', shared_code: <<~RUBY
+  def e2e_shared_tag
+    ' [shared]'
+  end
+RUBY
 
-e2e_workflow 'E2E issue', 'issue',
-             before_save: refuse('subject', 'an issue') +
-               "if subject.to_s.include?('[cw]')\n  self.done_ratio = 50\n" \
-               "  self.custom_workflow_messages[:notice] = 'E2E: done ratio set to 50% by a custom workflow'\nend\n" \
-               "self.subject = subject.sub('[shared]', '').strip + e2e_shared_tag if subject.to_s.include?('[shared]')\n" \
-               "self.custom_workflow_messages[:warning] = \"E2E: remote IP \#{custom_workflow_env[:remote_ip]}\" " \
-               "if subject.to_s.include?('[env]')\n",
-             after_save: "if subject.to_s.include?('[after-fail]')\n" \
-               "  raise RedmineCustomWorkflows::Errors::WorkflowError, 'E2E: after_save failed'\nend\n" \
-               "if subject.to_s.include?('[after-crash]')\n  nil.no_such_method\nend\n" \
-               "if subject.to_s.include?('[mail]') && saved_change_to_subject?\n" \
-               "  CustomWorkflowMailer.deliver_custom_email(User.find_by(login: 'manager'), " \
-               "subject: \"E2E custom mail for issue #\#{id}\", text_body: \"Issue '\#{subject}' was saved.\")\nend\n",
-             before_destroy: "if subject.to_s.include?('[keep]')\n" \
-               "  self.custom_workflow_messages[:error] = 'E2E: this issue cannot be deleted'\n" \
-               "  raise RedmineCustomWorkflows::Errors::WorkflowError, 'E2E: this issue cannot be deleted'\nend\n"
+issue_before_save = refuse('subject', 'an issue') + <<~'RUBY'
+  if subject.to_s.include?('[cw]')
+    self.done_ratio = 50
+    self.custom_workflow_messages[:notice] = 'E2E: done ratio set to 50% by a custom workflow'
+  end
+  self.subject = subject.sub('[shared]', '').strip + e2e_shared_tag if subject.to_s.include?('[shared]')
+  if subject.to_s.include?('[env]')
+    self.custom_workflow_messages[:warning] = "E2E: remote IP #{custom_workflow_env[:remote_ip]}"
+  end
+RUBY
+issue_after_save = <<~'RUBY'
+  if subject.to_s.include?('[after-fail]')
+    raise RedmineCustomWorkflows::Errors::WorkflowError, 'E2E: after_save failed'
+  end
+  if subject.to_s.include?('[after-crash]')
+    nil.no_such_method
+  end
+  if subject.to_s.include?('[mail]') && saved_change_to_subject?
+    CustomWorkflowMailer.deliver_custom_email(User.find_by(login: 'manager'),
+                                              subject: "E2E custom mail for issue ##{id}",
+                                              text_body: "Issue '#{subject}' was saved.")
+  end
+RUBY
+issue_before_destroy = <<~RUBY
+  if subject.to_s.include?('[keep]')
+    self.custom_workflow_messages[:error] = 'E2E: this issue cannot be deleted'
+    raise RedmineCustomWorkflows::Errors::WorkflowError, 'E2E: this issue cannot be deleted'
+  end
+RUBY
+e2e_workflow 'E2E issue', 'issue', before_save: issue_before_save, after_save: issue_after_save,
+                                   before_destroy: issue_before_destroy
 
-e2e_workflow 'E2E project only', 'issue',
-             before_save: "self.custom_workflow_messages[:warning] = 'E2E: project-only workflow ran' " \
-               "if subject.to_s.include?('[project-only]')\n",
-             is_for_all: false
+e2e_workflow 'E2E project only', 'issue', is_for_all: false, before_save: <<~RUBY
+  if subject.to_s.include?('[project-only]')
+    self.custom_workflow_messages[:warning] = 'E2E: project-only workflow ran'
+  end
+RUBY
 e2e_workflow 'E2E inactive', 'issue', before_save: refuse('subject', 'never'), active: false
 
 e2e_workflow 'E2E version', 'version', before_save: refuse('name', 'a version') + notice('version')
 e2e_workflow 'E2E time entry', 'time_entry', before_save: refuse('comments', 'a time entry') + notice('time entry')
-e2e_workflow 'E2E project', 'project', before_save: refuse('name', 'a project') +
-                                                    "#{notice('project')[0..-2]} if name.to_s.include?('[cw]')\n"
+e2e_workflow 'E2E project', 'project',
+             before_save: "#{refuse('name', 'a project')}#{notice('project').chomp} if name.to_s.include?('[cw]')\n"
 e2e_workflow 'E2E wiki content', 'wiki_content', before_save: refuse('text', 'a wiki text') + notice('wiki content')
-e2e_workflow 'E2E member', 'member',
-             before_save: "if principal&.login == 'outsider' && project&.identifier == 'e2e-private'\n" \
-               "  raise RedmineCustomWorkflows::Errors::WorkflowError, 'E2E: outsider may not join e2e-private'\n" \
-               "end\n" + notice('member')
+e2e_workflow 'E2E member', 'member', before_save: <<~RUBY + notice('member')
+  if principal&.login == 'outsider' && project&.identifier == 'e2e-private'
+    raise RedmineCustomWorkflows::Errors::WorkflowError, 'E2E: outsider may not join e2e-private'
+  end
+RUBY
 e2e_workflow 'E2E user', 'user', before_save: refuse('firstname', 'a user') + notice('user')
 e2e_workflow 'E2E group', 'group', before_save: refuse('lastname', 'a group') + notice('group')
-e2e_workflow 'E2E group users', 'group_users',
-             before_add: "if @user.login == 'outsider'\n" \
-               "  raise RedmineCustomWorkflows::Errors::WorkflowError, 'E2E: outsider may not join a group'\nend\n"
+e2e_workflow 'E2E group users', 'group_users', before_add: <<~RUBY
+  if @user.login == 'outsider'
+    raise RedmineCustomWorkflows::Errors::WorkflowError, 'E2E: outsider may not join a group'
+  end
+RUBY
 e2e_workflow 'E2E attachment', 'attachment', before_save: refuse('description', 'an attachment')
-e2e_workflow 'E2E issue relation', 'issue_relation',
-             before_save: "if relation_type == 'blocks'\n" \
-               "  raise RedmineCustomWorkflows::Errors::WorkflowError, 'E2E: blocks relations are refused'\nend\n" +
-               notice('issue relation')
+e2e_workflow 'E2E issue relation', 'issue_relation', before_save: <<~RUBY + notice('issue relation')
+  if relation_type == 'blocks'
+    raise RedmineCustomWorkflows::Errors::WorkflowError, 'E2E: blocks relations are refused'
+  end
+RUBY
 %w[issue project wiki_page].each do |container|
   e2e_workflow "E2E #{container.tr('_', ' ')} attachments", "#{container}_attachments",
-               before_add: "if @attachment.filename.include?('refuse')\n" \
-                 "  raise RedmineCustomWorkflows::Errors::WorkflowError, 'E2E: #{container} file refused'\nend\n",
-               after_add: "Rails.logger.info \"E2E #{container} attachment added: \#{@attachment.filename}\"\n"
+               before_add: <<~RUBY, after_add: <<~RUBY
+                 if @attachment.filename.include?('refuse')
+                   raise RedmineCustomWorkflows::Errors::WorkflowError, 'E2E: #{container} file refused'
+                 end
+               RUBY
+                 Rails.logger.info "E2E #{container} attachment added: \#{@attachment.filename}"
+               RUBY
 end
 
 Group.find_or_create_by!(lastname: 'E2E group')

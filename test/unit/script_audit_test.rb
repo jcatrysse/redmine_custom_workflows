@@ -49,7 +49,7 @@ class ScriptAuditTest < RedmineCustomWorkflows::Test::UnitTest
     workflow.after_save = "raise RedmineCustomWorkflows::Errors::WorkflowError, 'too late'"
     workflow.before_save = 'Time.now.to_s(:db)'
     found = RedmineCustomWorkflows::ScriptAudit.findings([workflow])
-    assert_equal [[workflow, :before_save, 1], [workflow, :after_save, nil]], found.map { |f| f.first(3) }
+    assert_equal([[workflow, :before_save, 1], [workflow, :after_save, nil]], found.map { |f| f.first(3) })
     assert_equal RedmineCustomWorkflows::ScriptAudit::AFTER_ERROR_NOTE, found.last.last
   end
 

@@ -53,6 +53,14 @@ Rails/HasAndBelongsToMany:
 Rails/SkipsModelValidations:
   Exclude:
     - db/migrate/20210210144000_change_default_active_boolean_value_to_custom_workflows.rb
+    # Tests store scripts without the syntax check, which runs them
+    - test/**/*
+
+# The after_save/after_destroy callbacks return the result of the workflows, but Rails ignores it. Renaming them or
+# turning a false result into `throw :abort` (3.1.0) made a failing after_* script an HTTP 500.
+Naming/PredicateMethod:
+  Exclude:
+    - lib/redmine_custom_workflows/patches/models/*_patch.rb
 
 Style/ExpandPathArguments:
   Enabled: false

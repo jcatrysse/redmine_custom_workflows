@@ -24,7 +24,8 @@ namespace :redmine do
       findings = RedmineCustomWorkflows::ScriptAudit.findings
       findings.each do |workflow, field, line, message|
         state = workflow.active? ? 'active' : 'inactive'
-        puts "##{workflow.id} #{workflow.name} (#{workflow.observable}, #{state}) #{field}#{":#{line}" if line}: #{message}"
+        location = line ? "#{field}:#{line}" : field
+        puts "##{workflow.id} #{workflow.name} (#{workflow.observable}, #{state}) #{location}: #{message}"
       end
       puts "#{findings.size} finding(s) in #{CustomWorkflow.count} workflow(s)"
     end

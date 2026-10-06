@@ -50,10 +50,11 @@ class CustomWorkflowsControllerTest < RedmineCustomWorkflows::Test::TestCase
     assert_response :success
     # The save scripts are filled in, so their fieldset is open; the destroy scripts are empty, so it is closed
     assert_select 'fieldset.collapsible:not(.collapsed) > legend.icon-expanded svg use[href$="#icon--angle-down"]', 1
-    assert_select 'fieldset.collapsible.collapsed > legend.icon-collapsed svg.icon-rtl use[href$="#icon--angle-right"]', 1
+    assert_select 'fieldset.collapsible.collapsed > legend.icon-collapsed svg.icon-rtl use[href$="#icon--angle-right"]',
+                  1
   end
 
-  def test_import_of_an_export_made_by_2_1_3
+  def test_import_of_an_export_made_by_two_one_three
     post '/login', params: { username: 'admin', password: 'admin' }
     file = Rack::Test::UploadedFile.new(File.expand_path('../fixtures/files/custom_workflow_2.1.3.xml', __dir__),
                                         'application/xml')

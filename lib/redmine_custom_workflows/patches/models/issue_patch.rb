@@ -32,8 +32,9 @@ module RedmineCustomWorkflows
 
         def self.prepended(base)
           base.class_eval do
-            # Declared before the callbacks below: it re-registers core's before_save :attach_saved_attachments, which must
-            # run before before_save_custom_workflows so that an error from a before_add script aborts the save (as in 2.x)
+            # Declared before the callbacks below: it re-registers core's before_save :attach_saved_attachments, which
+            # must run before before_save_custom_workflows, so that an error from a before_add script aborts the save
+            # (as in 2.x)
             acts_as_attachable before_add: proc {}, # => before_add_for_attachments
                                after_add: :attachment_added, # inherited
                                before_remove: proc {}, # => before_remove_for_attachments
