@@ -76,8 +76,10 @@ fi
 
 if [ ! -f "$REDMINE_DIR/config/configuration.yml" ]; then
   mkdir -p "$REDMINE_DIR/tmp/mails"
+  # Only for the server's environment: under default: the test environment would write mail to files too, and
+  # ActionMailer::Base.deliveries would stay empty in the plugin's tests.
   cat > "$REDMINE_DIR/config/configuration.yml" <<YAML
-default:
+$RMP_SERVER_ENV:
   email_delivery:
     delivery_method: :file
     file_settings:
