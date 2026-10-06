@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hash>
+  <id type="integer">2</id>
+  <before-save>self.custom_workflow_messages[:notice] = %q(from 5.x) if subject_changed?</before-save>
+  <created-at type="dateTime">2026-10-06T19:19:12Z</created-at>
+  <updated-at type="dateTime">2026-10-06T19:19:12Z</updated-at>
+  <name>GEOxyz 5.x export</name>
+  <description>Made on 5.x</description>
+  <string></string>
+  <position type="integer">2</position>
+  <integer type="integer">1</integer>
+  <after-save>Rails.logger.info(%q(after save 5.x))</after-save>
+  <is-for-all type="boolean">true</is-for-all>
+  <author>jan.catrysse@geoxyz.eu</author>
+  <active type="boolean">true</active>
+  <observable>issue</observable>
+  <shared-code nil="true"/>
+  <before-add nil="true"/>
+  <after-add nil="true"/>
+  <before-remove nil="true"/>
+  <after-remove nil="true"/>
+  <before-destroy></before-destroy>
+  <after-destroy></after-destroy>
+  <exported-at>2026-10-06T19:19:12Z</exported-at>
+  <plugin-version>2.1.3 devel</plugin-version>
+  <ruby-version>3.3.6-p108</ruby-version>
+  <rails-version>6.1.7.10</rails-version>
+</hash>

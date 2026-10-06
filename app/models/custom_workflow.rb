@@ -51,7 +51,8 @@ class CustomWorkflow < ApplicationRecord
   end)
 
   def self.import_from_xml(xml)
-    attributes = Hash.from_xml(xml).values.first
+    # An empty element comes back as nil; leave it out so that a NOT NULL column (string, description) gets its default
+    attributes = Hash.from_xml(xml).values.first.compact
     attributes.delete 'id'
     attributes.delete 'exported_at'
     attributes.delete 'plugin_version'
