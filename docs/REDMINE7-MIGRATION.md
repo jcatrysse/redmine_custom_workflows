@@ -16,18 +16,46 @@ what is left. Written 2026-10-06 from a measured analysis (report at the bottom)
 | | |
 |---|---|
 | Plugin id | `redmine_custom_workflows` |
-| GEOxyz runs today | `5.x` |
+| GEOxyz runs today | `5.x` @ 0398974 (2.1.3 devel). Note: `origin/5.x` now points at upstream 38d6a53 (fast-forwarded since the analysis) |
 | Upstream | anteo/redmine_custom_workflows master @ 38d6a53e11975a8f0a0d9c6cb5af3540607c6e5e (v3.1.1, 2026-07-24) |
-| Runs on Redmine 7 as is | NEE |
-| Upstream sync | SYNC AANBEVOLEN: upstream master v3.1.1 (38d6a53) into redmine70-migration (from origin/5.x, which has no own commits); switch GEOxyz from 5.x to the 3.1.x line. Same 16 migrations, no data migration needed. |
-| After sync | DEELS |
+| Runs on Redmine 7 as is | NEE (5.x does not boot) |
+| Upstream sync | DONE: v3.1.1 merged (19bf326) |
+| After sync + this branch | JA: all work list items done, tests and e2e green on PostgreSQL and MariaDB |
 | Complexity (1 trivial .. 5 rewrite) | 2 |
-| Measured on | Redmine 7.0.1 (7.0-stable-GEOxyz + latest 7.0-stable), Rails 8.1.3.1, Ruby 3.3.6, PostgreSQL 16 and MariaDB 10.11 |
-| Branch head when this file was written | `d5a7e04` |
+| Measured on | Redmine 7.0-stable-GEOxyz @ 8067e23 (7.0.1), Rails 8.1.3.1, Ruby 3.3.6, PostgreSQL 16.15 and MariaDB 10.11.14; before: Redmine 5.1-stable @ 16eb9e6 (5.1.13) with 0398974 |
+| Branch head | see `git log`; last full verification on the commit that updated this file |
+| 5.1 compatibility | not applicable: the 3.1 line requires Redmine 6.0+ (`requires_redmine version_or_higher: '6.0.0'`) |
+
+### Results (2026-10-06, measured in this session)
+
+| check | PostgreSQL 16 | MariaDB 10.11 |
+|---|---|---|
+| Baseline before any change (65 upstream tests) | 65 runs, 106 assertions, 0 failures, 0 errors | not run before (same code) |
+| Plugin tests at the end (`test_plugin.sh`) | 108 runs, 268 assertions, 0 failures, 0 errors, 0 skips | 108 runs, 268 assertions, 0 failures, 0 errors, 0 skips |
+| Migrations down to 0 and up (test DB) | 16 reverted, 16 migrated | 16 reverted, 16 migrated |
+| Eager load (`rails zeitwerk:check`, production) | All is good | (same code) |
+| Baseline e2e before any change | smoke 15 pages, 1 problem (export download, a harness false alarm, fixed in e3439a8); core 6 shots, 0 problems | - |
+| e2e at the end (`e2e.sh`: smoke + core + 8 scenarios) | 10 scripts, 96 screenshots, 0 problems (`docs/e2e/`) | 10 scripts, 96 screenshots, 0 problems (`docs/e2e/mariadb/*.md`, screenshots not committed twice) |
+| Together with redmine_plugin_computed_custom_field, redmine_depending_custom_fields, redmine_parent_child_filters, redmine_subtask, redmine_issue_templates (all `redmine70-migration`, PostgreSQL) | tests 108 runs, 0 failures; e2e 10 scripts, 96 screenshots, 0 problems | - |
+| RuboCop (`.rubocop.yml` of the plugin) on lib, app, test | 2 offenses, both in unchanged upstream code (Rails/StrongParametersExpect in the controller) | |
+| OpenAI review (gpt-5) | this session's range: no findings; whole range from 0398974: 7 findings, 1 fixed, 6 not defects or upstream (`docs/reviews/`) | |
+
+Before pictures (`docs/e2e/before/`, Redmine 5.1.13 + 2.1.3, Ruby 3.3.6 with the Gemfile's `< 3.3` bound relaxed
+for the measurement): admin_crud 13/0, admin_list 6/1 (icons not SVG on 5.1, expected), project_settings 8/1 (the
+settings tab bug, also on 5.x), issue_workflows 10/0, collections 9/0, observables 14/0. export_import cannot run on
+5.1 (other menu markup); the import itself fails there too (measured with `rails runner`).
 
 ## Already on this branch
 
 - `19bf326` Merge upstream anteo/redmine_custom_workflows master (38d6a53) for Redmine 7
+- `e3439a8` Test kit: provision PostgreSQL as root; smoke counts an export download as a page
+- `dbdcf48` A failing after_save/after_destroy script no longer turns a save into HTTP 500 (work list 1, 3)
+- `e6f19ac` Workflow form: SVG expand/collapse icons on the script fieldsets (work list 5)
+- `46c4a60` Import of an exported workflow no longer fails on an empty field (work list 4)
+- `4f6b6c1` `rake redmine:custom_workflows:audit` for stored scripts (work list 2)
+- `220a906` Project settings: saving the Custom workflows tab returns to that tab
+- `c425ebf` Issue attachments: a refusing before_add script stops the issue save again
+- `457a89f`, `6fc4136`, `3876ceb` e2e seed, scenarios and evidence; `ff56e73` RuboCop; `572775f` mailer test
 
 ## Work list for the migration session
 
@@ -35,20 +63,124 @@ In this order: things that break, security, the GEOxyz changes, the open items, 
 
 **Priority items**
 
-1. Decide on the upstream 3.1 behaviour change: a failing after_save/after_destroy script now raises (HTTP 500, rollback) where 5.x only logged it.
+1. DONE (dbdcf48). Decide on the upstream 3.1 behaviour change: a failing after_save/after_destroy script now raises (HTTP 500, rollback) where 5.x only logged it.
+   Verdict: restored the 2.x behaviour (log it, add the error to the object, the save goes through). It came from
+   RuboCop's Naming/PredicateMethod in upstream a224ad1, not from a design decision; Rails never catches `:abort` in
+   an after callback. 30 unit tests + 1 functional test, e2e `issue_workflows-after-save-fails` (and the REST API
+   answers 204, was 500). See "Open questions for Jan" 1.
 
 **Open items from the analysis** (Dutch; where they conflict with a decision or a priority item above, those win)
 
-2. Audit the custom workflow scripts stored in the production DB for Rails 8/Ruby 3.3 breakers before upgrading (to_s(:db), update_attributes, File.exists?, errors[:x] <<, URI.escape)
-3. Upstream 3.1.0 added throw :abort in after_save/after_destroy callbacks: a failing after_save/after_destroy script now raises UncaughtThrowError -> HTTP 500 + rollback (measured, issue_patch.rb:90); decide keep / revert locally / report upstream; move any 'raise WorkflowError' from after_save to before_save
-4. Verify import of workflow XML exports made on 5.x (not verified)
-5. Cosmetic: icon icon-collapsed legends in _form.html.erb
+2. DONE (4f6b6c1). Audit the custom workflow scripts stored in the production DB for Rails 8/Ruby 3.3 breakers before upgrading (to_s(:db), update_attributes, File.exists?, errors[:x] <<, URI.escape)
+   Verdict: `bundle exec rake redmine:custom_workflows:audit RAILS_ENV=production`, read-only (scripts are parsed with
+   `RubyVM::InstructionSequence.compile`, never run). Reports syntax errors, removed Ruby/Rails API, methods renamed
+   in 3.x (`run_custom_workflows` -> `run_custom_workflows?`, `run_shared_code` -> `run_shared_code?`,
+   `attachments_callback` -> `attachments_callback?`), `icon icon-*` and errors raised in after_* scripts. Measured
+   on the e2e instance with a planted script:
+   ```
+   #115 E2E issue (issue, active) after_save: raises or adds an error in an after_* script: the record is already saved, the user does not see it; move the check to before_save/before_destroy
+   #131 E2E audit sample (issue, inactive) before_save:2: to_s(:format) was removed in Rails 7.1, use to_fs(:format)
+   #131 E2E audit sample (issue, inactive) before_save:3: update_attributes was removed in Rails 6.1, use update
+   #131 E2E audit sample (issue, inactive) after_save: raises or adds an error in an after_* script: ...
+   4 finding(s) in 19 workflow(s)
+   ```
+   The production database itself is out of reach here: run it there (see "After the upgrade").
+3. DONE, same as 1 (dbdcf48).
+4. DONE (46c4a60). Verify import of workflow XML exports made on 5.x.
+   Verdict: it did not work, on 5.x either: every export has an empty `<string>` (a NOT NULL column left by a typo in
+   migration 20120601054047) and often an empty `<description>`; `Hash.from_xml` makes them nil and the insert failed
+   with PG::NotNullViolation ("Error importing custom workflow"). Fixed; a real 2.1.3 export made on Redmine 5.1 is
+   in `test/fixtures/files/custom_workflow_2.1.3.xml`, imported in a functional test and in the browser on both
+   databases (`export_import-from-2-1-3`).
+5. DONE (e6f19ac). Cosmetic: icon icon-collapsed legends in _form.html.erb.
+   Verdict: core markup (`sprite_icon` angle-right/angle-down) and the real open/closed state (the legend always said
+   "collapsed" before, so the first click inverted it).
 
 **Checks**
 
-6. Run the plugin's whole test suite on Redmine 7.0-stable-GEOxyz with PostgreSQL AND MariaDB, and once on 5.1-stable if the branch is meant to stay 5.1-compatible.
-7. Check Redmine 7 webhooks against this plugin (see "Rules"), and note the result here even if nothing is needed.
-8. Verify every feature of the plugin by hand on a running Redmine 7 (screenshots).
+6. DONE. Test suite on 7.0-stable-GEOxyz with PostgreSQL and MariaDB: numbers in "Results". 5.1-stable: not
+   applicable (the 3.1 line requires Redmine 6.0). The official 7.0-stable was not run separately (the GEOxyz branch
+   was; the analysis measured both).
+7. DONE, nothing to change. Webhooks: core sends `issue.*` webhooks after commit, from the saved record. Measured with
+   a receiver in `mail_webhooks.mjs`: a value set by a before_save script (done_ratio 50) is in the payload; a save
+   refused by a workflow sends nothing; a save whose after_save script failed is saved and sends its webhook (on 3.1.1
+   as released it was rolled back and sent nothing). The plugin adds no data to issues of its own, so nothing for the
+   payload to show. Core refuses loopback webhook targets: the seed uses the machine's own address.
+8. DONE. Every function in the browser on a real production-mode Redmine 7: see "Inventory".
+
+Further fixes found while testing in the browser (not on the original list):
+
+- 220a906: saving the project settings tab "Custom workflows" landed on the "Project" tab (form posted
+  `tab=custom_workflow`, the tab is `custom_workflows`). Also on 2.1.3 (before picture).
+- c425ebf: on 3.1.1 an `issue_attachments` before_add script that raises no longer stopped the issue update: the
+  re-declared `acts_as_attachable` moved core's `attach_saved_attachments` behind the plugin's before_save. On 2.1.3
+  the update is refused with the message (before picture `collections-issue-attachment-refused`). Order restored.
+- 572775f: the upstream mailer tests returned early when no mail was sent; they assert again. The test kit's
+  `configuration.yml` no longer forces file delivery on the test environment.
+
+## Inventory of functions
+
+Screenshots in `docs/e2e/` (PostgreSQL run; the `.md` per scenario lists user, URL and what each one shows),
+before pictures in `docs/e2e/before/`, MariaDB tables in `docs/e2e/mariadb/`.
+
+| function | how a user reaches it | scenario | screenshots |
+|---|---|---|---|
+| Admin menu entry "Custom workflows" | Administration | admin_list | admin_list-admin-menu, smoke-11 |
+| List of workflows (order, inactive greyed, actions) | Administration > Custom workflows | admin_list | admin_list-list, admin_list-actions-menu |
+| Refusal for non-admins (manager, reporter) and anonymous | same URLs | admin_list, export_import | admin_list-manager-refused, -reporter-refused, -anonymous-login, export_import-manager-refused |
+| Create, with observable switch and every validation (no script, syntax error, author address, duplicate name) | Create a custom workflow | admin_crud | admin_crud-new-form, -observable-group-users, -error-blank, -legend-open, -error-syntax, -error-duplicate, -created |
+| Edit, projects, is_for_all | name link in the list | admin_crud | admin_crud-edit-form, -edited |
+| Activate / deactivate | lock icon | admin_crud | admin_crud-deactivated |
+| Reorder (drag handle) | handle in the list | admin_crud | admin_crud-reordered |
+| Delete (with confirmation), missing id 404 | Delete | admin_crud | admin_crud-deleted, -missing-404 |
+| Export XML | Export | export_import | export_import-export (+ export_import-download.xml) |
+| Import XML: a 2.1.3 export, a round trip, an invalid file, a script with a syntax error | ... > Import workflow | export_import | export_import-from-2-1-3(-dialog, -edit), -round-trip, -invalid, -syntax |
+| Project settings tab (permission manage_project_workflow) | Project > Settings > Custom workflows | project_settings | project_settings-tab, -enabled, -not-enabled, -runs |
+| ... without the permission, forged custom_workflow_ids, non-member | same | project_settings | project_settings-no-tab, -forged-ignored, -reporter-refused, -outsider-refused |
+| Issue: before_save changes a field, message flash, refusal, shared code, remote IP | issue form | issue_workflows | issue_workflows-before-save-changes, -before-save-refuses, -shared-code, -env-remote-ip |
+| Issue: after_save failing / crashing (the 3.1.1 HTTP 500) | issue form | issue_workflows | issue_workflows-after-save-fails, -after-save-crashes |
+| Issue: before_destroy refuses, delete | Delete issue | issue_workflows | issue_workflows-before-destroy-refuses, -deleted |
+| Issue: bulk update (context menu), a member without plugin permissions | issue list, new issue | issue_workflows | issue_workflows-bulk-update, -reporter-create |
+| REST API (422 refusal, 204 after a failing after_save) | `PUT /issues/2.json` | issue_workflows | issue_workflows-rest-api |
+| Mail from a script (CustomWorkflowMailer) | after_save script | mail_webhooks | mail_webhooks-mail (file in `tmp/mails`) |
+| Webhooks (Redmine 7) consistent with workflows | core webhook | mail_webhooks | mail_webhooks-webhooks, -webhook-config |
+| Version, time entry, project, wiki content, attachment, user, group (observables) | their core forms | observables | observables-*-refused / -saved (14) |
+| Member (observable) | Project > Settings > Members | collections | collections-member-refused |
+| Issue relation (observable) | Related issues > Add | collections | collections-relation-refused, -relation-added |
+| Issue / project (Files) / wiki page attachments (collection observables) | upload | collections | collections-issue-attachment-refused, -issue-attachment-added, -project-file-refused, -wiki-file-refused |
+| Group users (collection observable) | Administration > Groups > Users | collections | collections-group-users-outsider, -group-users-reporter |
+| Stylesheet on plugin and project pages (view hook) | any plugin page | smoke | smoke-11..15 |
+| Script audit (rake, CLI) | `rake redmine:custom_workflows:audit` | command, output under work list 2 | - |
+| Core flows with the plugin installed | issue create/edit, context menu | core (kit) | core-* |
+
+Behaviour recorded, not changed (the same on 2.1.3, measured in the before run):
+
+- A `before_add` script of group users, project files and wiki page attachments runs and logs its error, but cannot
+  stop the add (Rails ignores the return value of a collection callback; only issue attachments are stopped, through
+  the issue's before_save). See "Open questions for Jan" 2.
+- A refused member (member before_save) is not added, but the modal closes without a message (core re-validates the
+  member, which then looks valid). A refused issue delete shows the workflow's error flash and core's "Successful
+  deletion" next to it.
+- A blank name is accepted (only uniqueness is validated); an imported workflow keeps the position of the file, and a
+  new one gets `count + 1`, so positions can repeat and the list order look odd; syntax errors show the server path
+  of the eval to the admin.
+- Webhooks belong to a user: `/webhooks` as admin does not list the manager's.
+
+## Open questions for Jan
+
+1. **after_save/after_destroy failures** (built: option b). (a) keep 3.1.1: a failing after_* script gives HTTP 500
+   and rolls back the save; (b) 2.x behaviour: log it and save (built, dbdcf48); (c) report upstream. Recommendation:
+   keep (b) and report it upstream (anteo/redmine_custom_workflows): the change came from a RuboCop rename, not from a
+   feature request. Not reported from here (external).
+2. **Collection before_add cannot refuse** (group users, project files, wiki page attachments): same on 2.1.3.
+   Options: (a) leave and document (built: nothing changed); (b) make a failing before_add raise so Rails stops the
+   add (behaviour change, users would get an error page or a silent rollback depending on the controller).
+   Recommendation: (a); scripts that must refuse should check in the before_save of the object.
+3. **New rake task** `redmine:custom_workflows:audit` (read-only, no setting, no schema change). Recommendation: keep;
+   it is how the production scripts get audited before the switch.
+4. **Upstream reports**: the after_save 500 and the attachment callback order (c425ebf) are upstream bugs in 3.1.x;
+   the import NOT NULL failure and the settings tab are upstream bugs since 2.x. Recommendation: report all four
+   upstream with the tests from this branch.
 
 ## GEOxyz changes to review or re-apply
 
@@ -58,7 +190,18 @@ None: this branch carries no GEOxyz commits of its own (upstream code only).
 
 Actions the person doing the upgrade must take, or know about, for this plugin:
 
-- Audit the stored workflow scripts (`SELECT * FROM custom_workflows`) for Ruby 3.3 / Rails 8.1 breakers before they run on production; move after_save scripts that raise to before_save.
+- Before the switch, with the new plugin code in place (read-only, it does not need the app restarted):
+  `bundle exec rake redmine:custom_workflows:audit RAILS_ENV=production`. Fix every reported script (syntax,
+  removed Ruby/Rails API, `run_custom_workflows`/`run_shared_code` without `?`). Do this while the workflows are
+  still on 5.x if possible: a script that raises at runtime is logged and shown as "custom workflow error".
+- Scripts that raise in after_save/after_destroy: the save goes through and the user does not see the message (as on
+  5.x). Move such checks to before_save/before_destroy.
+- `rake redmine:plugins:migrate`: nothing to migrate (same 16 migrations as 5.x).
+- Deploy branch `redmine70-migration` (3.1.1 + these fixes) instead of `5.x`; `origin/5.x` itself now points at
+  upstream 3.1.1 without these fixes.
+- No settings, cron jobs or files. Webhooks need nothing from this plugin.
+- Not tested here (no access): the real production scripts and data, real mail delivery (SMTP; tested with file
+  delivery).
 
 ## How to test
 
