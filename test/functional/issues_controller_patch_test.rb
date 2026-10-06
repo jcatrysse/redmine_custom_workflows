@@ -49,6 +49,20 @@ class IssuesControllerPatchTest < RedmineCustomWorkflows::Test::TestCase
     assert_equal 'Updated subject', @issue1.reload.subject
   end
 
+  def test_before_add_attachment_cw_refuses_the_update
+    CustomWorkflow.create!(name: 'Refuse files', observable: 'issue_attachments', is_for_all: true, active: true,
+                           before_add: "raise RedmineCustomWorkflows::Errors::WorkflowError, 'No files' " \
+                                       "if @attachment.filename == 'refused.txt'")
+    file = Rack::Test::UploadedFile.new(StringIO.new('text'), 'text/plain', original_filename: 'refused.txt')
+    assert_no_difference -> { @issue1.attachments.count } do
+      put "/issues/#{@issue1.id}", params: { issue: { subject: 'Updated subject' },
+                                             attachments: { '1' => { 'file' => file } } }
+    end
+    assert_response :success
+    assert_select '#errorExplanation', text: /No files/
+    assert_not_equal 'Updated subject', @issue1.reload.subject
+  end
+
   def test_cw_env
     put "/issues/#{@issue1.id}", params: { issue: { subject: 'Updated subject' } }
     assert_redirected_to issue_path(@issue1)

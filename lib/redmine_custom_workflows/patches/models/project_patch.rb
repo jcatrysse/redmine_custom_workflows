@@ -39,11 +39,8 @@ module RedmineCustomWorkflows
                               project.new_record? || user.allowed_to?(:manage_project_workflow, project)
                             }
 
-            before_save :before_save_custom_workflows
-            after_save :after_save_custom_workflows
-            before_destroy :before_destroy_custom_workflows
-            after_destroy :after_destroy_custom_workflows
-
+            # Declared before the callbacks below: it re-registers core's before_save :attach_saved_attachments, which must
+            # run before before_save_custom_workflows so that an error from a before_add script aborts the save (as in 2.x)
             acts_as_attachable view_permission: :view_files, # inherited
                                edit_permission: :manage_files, # inherited
                                delete_permission: :manage_files, # inherited
@@ -51,6 +48,11 @@ module RedmineCustomWorkflows
                                after_add: proc {}, # => after_add_for_attachments
                                before_remove: proc {}, # => before_remove_for_attachments
                                after_remove: proc {} # => after_remove_for_attachments
+
+            before_save :before_save_custom_workflows
+            after_save :after_save_custom_workflows
+            before_destroy :before_destroy_custom_workflows
+            after_destroy :after_destroy_custom_workflows
 
             def self.attachments_callback?(event, project, attachment)
               project.instance_variable_set(:@project, project)

@@ -66,11 +66,12 @@ await Promise.all([p().waitForNavigation(), p().click('#issue-form input[name=co
 await t.settle();
 t.check('issue attachment refuse');
 const issueFiles = (await api('/issues/1.json?include=attachments')).issue.attachments.map(a => a.filename);
-// before_add runs and its WorkflowError is logged, but a collection callback cannot stop the add (the same on 2.1.3)
+// before_add refuses the file: the issue is not saved and the form shows the workflow error (as on 2.1.3)
 if (!/E2E: issue file refused/.test(logSince(mark))) t.problems.push('issue attachments: before_add did not run');
-if (!/E2E issue attachment added: refuse-/.test(logSince(mark))) t.problems.push('issue attachments: after_add did not run');
-const issueRefusedAttached = issueFiles.some(f => f.startsWith(`refuse-${stamp}`));
-await t.shot('issue-attachment-refused', `Issue attachments: before_add ran and raised for refuse-*.txt (logged), yet the file is ${issueRefusedAttached ? 'attached: a collection callback cannot refuse' : 'not attached'}`);
+const issueErr = (await p().locator('#errorExplanation').innerText().catch(() => '')).trim();
+if (!/issue file refused/.test(issueErr)) t.problems.push(`issue attachments: error shown "${issueErr}"`);
+if (issueFiles.some(f => f.startsWith(`refuse-${stamp}`))) t.problems.push('issue attachments: refused file attached');
+await t.shot('issue-attachment-refused', 'Issue attachments: before_add refuses refuse-*.txt; the update is not saved and the form shows the error');
 await t.go('/issues/1/edit');
 await p().setInputFiles('#issue-form input[type=file]', file(`ok-${stamp}.txt`));
 await p().waitForSelector('#issue-form .attachments_fields input.filename', { timeout: 10000 });
