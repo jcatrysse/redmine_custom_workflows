@@ -4,6 +4,8 @@
 # Idempotent: every workflow named "E2E ..." is replaced. Each one shows a notice when it runs and refuses the
 # save when the edited text contains "[refuse]", so a scenario can prove both paths through the user interface.
 
+require 'socket'
+
 User.current = User.find_by(login: 'admin')
 CustomWorkflow.where("name LIKE 'E2E %'").destroy_all
 
