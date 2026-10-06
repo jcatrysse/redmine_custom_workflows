@@ -30,7 +30,10 @@ await t.login('admin');
 let n = 0;
 for (const uri of pages) {
   n += 1;
-  const res = await t.page.goto(t.BASE + uri).catch(e => ({ status: () => 0, err: e }));
+  let res = await t.page.goto(t.BASE + uri).catch(e => ({ status: () => 0, err: e }));
+  // A route that sends a file (an export) makes goto fail with "Download is starting";
+  // ask for it again outside the page to get its real status.
+  if (res.err && /Download is starting/.test(String(res.err))) res = await t.page.request.get(t.BASE + uri);
   await t.settle();
   const status = res.status();
   // 404/403/422 are expected for some guessed parameters; a 5xx never is.
