@@ -41,4 +41,15 @@ class CustomWorkflowsControllerTest < RedmineCustomWorkflows::Test::TestCase
     get '/custom_workflows'
     assert_response :forbidden
   end
+
+  def test_edit_collapsible_legends_have_svg_icons
+    @cw1.update_column :before_destroy, ''
+    @cw1.update_column :after_destroy, ''
+    post '/login', params: { username: 'admin', password: 'admin' }
+    get "/custom_workflows/#{@cw1.id}/edit"
+    assert_response :success
+    # The save scripts are filled in, so their fieldset is open; the destroy scripts are empty, so it is closed
+    assert_select 'fieldset.collapsible:not(.collapsed) > legend.icon-expanded svg use[href$="#icon--angle-down"]', 1
+    assert_select 'fieldset.collapsible.collapsed > legend.icon-collapsed svg.icon-rtl use[href$="#icon--angle-right"]', 1
+  end
 end

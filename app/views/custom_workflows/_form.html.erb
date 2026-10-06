@@ -72,7 +72,10 @@
     <% when *CustomWorkflow::COLLECTION_OBSERVABLES %>
       <% collapsed = !(@workflow.before_add.present? || @workflow.after_add.present? || @workflow.errors[:base].present?) %>
       <fieldset class="collapsible <%= collapsed ? 'collapsed' : '' %>">
-        <legend onclick="toggleFieldset(this);" class="icon icon-collapsed"><%= l(:label_add_workflows) %></legend>
+        <legend onclick="toggleFieldset(this);" class="icon icon-<%= collapsed ? 'collapsed' : 'expanded' %>">
+          <%= sprite_icon(collapsed ? 'angle-right' : 'angle-down', rtl: collapsed) %>
+          <%= l(:label_add_workflows) %>
+        </legend>
         <div class="<%= collapsed ? 'custom-workflow-hidden' : '' %>">
           <div class="splitcontent">
             <div class="splitcontentleft">
@@ -86,7 +89,10 @@
       </fieldset>
       <% collapsed = !(@workflow.before_remove.present? || @workflow.after_remove.present?) %>
       <fieldset class="collapsible <%= collapsed ? 'collapsed' : '' %>">
-        <legend onclick="toggleFieldset(this);" class="icon icon-collapsed"><%= l(:label_remove_workflows) %></legend>
+        <legend onclick="toggleFieldset(this);" class="icon icon-<%= collapsed ? 'collapsed' : 'expanded' %>">
+          <%= sprite_icon(collapsed ? 'angle-right' : 'angle-down', rtl: collapsed) %>
+          <%= l(:label_remove_workflows) %>
+        </legend>
         <div class="<%= collapsed ? 'custom-workflow-hidden' : '' %>">
           <div class="splitcontent">
             <div class="splitcontentleft">
@@ -101,7 +107,10 @@
     <% when *CustomWorkflow::SINGLE_OBSERVABLES %>
       <% collapsed = (not (@workflow.before_save.present? or @workflow.after_save.present? or @workflow.errors[:base].present?)) %>
       <fieldset class="collapsible <%= collapsed ? 'collapsed' : '' %>">
-        <legend onclick="toggleFieldset(this);" class="icon icon-collapsed"><%= l(:label_save_workflows) %></legend>
+        <legend onclick="toggleFieldset(this);" class="icon icon-<%= collapsed ? 'collapsed' : 'expanded' %>">
+          <%= sprite_icon(collapsed ? 'angle-right' : 'angle-down', rtl: collapsed) %>
+          <%= l(:label_save_workflows) %>
+        </legend>
         <div class="<%= collapsed ? 'custom-workflow-hidden' : '' %>">
           <div class="splitcontent">
             <div class="splitcontentleft">
@@ -121,7 +130,10 @@
       </fieldset>
       <% collapsed = !(@workflow.before_destroy.present? || @workflow.after_destroy.present?) %>
       <fieldset class="collapsible <%= collapsed ? 'collapsed' : '' %>">
-        <legend onclick="toggleFieldset(this);" class="icon icon-collapsed"><%= l(:label_destroy_workflows) %></legend>
+        <legend onclick="toggleFieldset(this);" class="icon icon-<%= collapsed ? 'collapsed' : 'expanded' %>">
+          <%= sprite_icon(collapsed ? 'angle-right' : 'angle-down', rtl: collapsed) %>
+          <%= l(:label_destroy_workflows) %>
+        </legend>
         <div class="<%= collapsed ? 'custom-workflow-hidden' : '' %>">
           <div class="splitcontent">
             <div class="splitcontentleft">
