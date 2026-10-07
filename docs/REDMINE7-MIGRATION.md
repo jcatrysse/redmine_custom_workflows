@@ -46,12 +46,45 @@ what is left. Written 2026-10-06 from a measured analysis (report at the bottom)
 | Upstream | anteo/redmine_custom_workflows master @ 38d6a53e11975a8f0a0d9c6cb5af3540607c6e5e (v3.1.1, 2026-07-24) |
 | Runs on Redmine 7 as is | NEE (5.x does not boot) |
 | Upstream sync | DONE: v3.1.1 merged (19bf326) |
-| After sync + this branch | JA: all work list items done, tests and e2e green on PostgreSQL and MariaDB |
+| After sync + this branch | JA: all work list items done and Jan's decisions of 2026-10-07 recorded; tests and e2e green on PostgreSQL, alone and with 25 other GEOxyz plugins |
 | Complexity (1 trivial .. 5 rewrite) | 2 |
 | Measured on | Redmine 7.0-stable-GEOxyz @ 8067e23 (7.0.1), Rails 8.1.3.1, Ruby 3.3.6, PostgreSQL 16.15 and MariaDB 10.11.14; before: Redmine 5.1-stable @ 16eb9e6 (5.1.13) with 0398974 |
 | Branch head | see `git log`; last full verification on the commit that updated this file |
 | 5.1 compatibility | not a requirement (decided 2026-10-07); the 3.1 line requires Redmine 6.0+ anyway |
 | Database | PostgreSQL 16 only (decided 2026-10-07); the MariaDB run of 2026-10-06 is kept as a note |
+
+### Results after Jan's decisions (2026-10-07, PostgreSQL 16.15, Redmine 7.0-stable-GEOxyz @ 8067e23)
+
+| check | result |
+|---|---|
+| Plugin tests alone | 108 runs, 279 assertions, 0 failures, 0 errors, 0 skips (109 runs on 2026-10-06 included two route helpers, `test_email_path/_url`, that are no tests; fixed in the test base) |
+| Plugin tests with 25 other GEOxyz plugins (list below) | 108 runs, 279 assertions, 0 failures, 0 errors, 0 skips |
+| e2e alone (`e2e.sh`: smoke, core, 9 scenarios) | 11 scripts, 108 screenshots, 0 problems (`docs/e2e/`) |
+| e2e with the same 25 plugins | 11 scripts, 108 screenshots, 0 problems; Project > Settings, the issue list and an issue page answer 200 |
+
+Together, the 25 plugins (`redmine70-migration` of each): bless-this-redmine-sso, redmine_plugin_computed_custom_field,
+redmine_ai_summary, redmine_description_macros, redmine_drawio, redmine_editauthor, redmine_extended_api,
+redmine_impersonate, redmine_inline_edit_issues, redmine_issue_field_visibility, redmine_issue_templates,
+redmine_issue_todo_lists2, redmine_issue_view_columns, redmine_mermaid_macro, redmine_more_previews,
+redmine_parent_child_filters, redmine_paste_as_wiki_tables, redmine_project_workflows, redmine_reporter_dashboards,
+redmine_stealth, redmine_subtask, redmine_tint_issues, redmine_user_specific_theme, redmine_wiki_extensions,
+redmine-view-customize. Private plugins (RedmineUP and others) were not installed.
+
+Findings with all 30 public plugins installed (none caused by this plugin; this plugin has no `alias_method`):
+
+- **Project > Settings HTTP 500**: `super: no superclass method 'project_settings_tabs'`. redmine_mail_digest,
+  redmine_itil_priority and redmine_depending_custom_fields patch `ProjectsHelper#project_settings_tabs` with
+  `alias_method`, redmine_ai_summary and redmine_wiki_extensions prepend into `ProjectsHelper`. Measured: still 500
+  with this plugin removed; 200 with this plugin and without those three. This plugin adds its tab through
+  `ProjectsController.helper` (outside `ProjectsHelper.ancestors`), the pattern redmine_reporter_dashboards and
+  redmine_project_workflows also use. To fix in those three plugins (their sessions).
+- **Issue pages 403 for core roles**: redmine_view_issue_description refuses issue details to a role without its own
+  permission (`vid_authorize_issue_detail`), by design. With it installed the core Reporter (kit `core.mjs`) and this
+  plugin's fixture role get 403 on `/issues/1`; GEOxyz roles need that permission.
+- **Route helpers named `test_*`** (redmine_ldap_sync `test_ldap_setting`, redmine_reporter_dashboards
+  `test_send_project_reporter_schedule`, redmine_ai_summary): Minitest ran them as tests in this plugin's
+  integration test that includes the route helpers, they errored, and a shoulda-context reporter from another bundle
+  aborted the run. Fixed on this side in 0d78541.
 
 ### Results (2026-10-06, measured in this session)
 
@@ -135,6 +168,15 @@ In this order: things that break, security, the GEOxyz changes, the open items, 
    payload to show. Core refuses loopback webhook targets: the seed uses the machine's own address.
 8. DONE. Every function in the browser on a real production-mode Redmine 7: see "Inventory".
 
+After Jan's decisions (2026-10-07):
+
+- 1b9079c: decisions recorded (q1 A, q2 A, q3 B, general rules); the plan's rules: no 5.1, PostgreSQL only, prepend
+  instead of alias_method.
+- 87a3507: q2, README "Where an error stops the change" and a test pinning the documented collection behaviour.
+- 0d78541: test base runs only real test methods (found running together with the other plugins).
+- d943c57: e2e scenario `decisions` (q1, q2 per user, refusals).
+- q1 (already built in dbdcf48) and q3 (nothing reported upstream) needed no code.
+
 Further fixes found while testing in the browser (not on the original list):
 
 - 220a906: saving the project settings tab "Custom workflows" landed on the "Project" tab (form posted
@@ -177,6 +219,7 @@ before pictures in `docs/e2e/before/`, MariaDB tables in `docs/e2e/mariadb/`.
 | Issue / project (Files) / wiki page attachments (collection observables) | upload | collections | collections-issue-attachment-refused, -issue-attachment-added, -project-file-refused, -wiki-file-refused |
 | Group users (collection observable) | Administration > Groups > Users | collections | collections-group-users-outsider, -group-users-reporter |
 | Stylesheet on plugin and project pages (view hook) | any plugin page | smoke | smoke-11..15 |
+| Decisions q1 and q2 per user (admin, manager, reporter, outsider) incl. refusals | issue form, Groups > Users, wiki attach | decisions | decisions-q1-admin/-manager/-reporter/-outsider, -q1-outsider-private-refused, -q2-admin-group-users, -q2-manager/-reporter/-outsider-groups-refused, -q2-manager-wiki-file, -q2-reporter-wiki, -q2-outsider-private-wiki-refused |
 | Script audit (rake, CLI) | `rake redmine:custom_workflows:audit` | command, output under work list 2 | - |
 | Core flows with the plugin installed | issue create/edit, context menu | core (kit) | core-* |
 
@@ -214,7 +257,14 @@ Actions the person doing the upgrade must take, or know about, for this plugin:
   removed Ruby/Rails API, `run_custom_workflows`/`run_shared_code` without `?`). Do this while the workflows are
   still on 5.x if possible: a script that raises at runtime is logged and shown as "custom workflow error".
 - Scripts that raise in after_save/after_destroy: the save goes through and the user does not see the message (as on
-  5.x). Move such checks to before_save/before_destroy.
+  5.x, decided by Jan 2026-10-07, q1). Move such checks to before_save/before_destroy.
+- A before_add script of group users, project files or wiki page attachments cannot refuse the add (as on 5.x,
+  decided q2): put such checks in the before_save of the object (README "Where an error stops the change").
+- The fixes of this branch are not reported upstream (decided q3); when upstream releases a new version, re-apply
+  them from this branch.
+- With the other GEOxyz plugins: Project > Settings answers 500 as long as redmine_mail_digest,
+  redmine_itil_priority or redmine_depending_custom_fields patch `project_settings_tabs` with `alias_method` (see
+  Results); not this plugin's code.
 - `rake redmine:plugins:migrate`: nothing to migrate (same 16 migrations as 5.x).
 - Deploy branch `redmine70-migration` (3.1.1 + these fixes) instead of `5.x`; `origin/5.x` itself now points at
   upstream 3.1.1 without these fixes.
