@@ -137,6 +137,19 @@ E.g.:
 CustomWorkflowMailer.deliver_custom_email(user, subject: subject, text_body: text)
 ```
 
+Where an error stops the change
+-------------------------------
+
+Raising `RedmineCustomWorkflows::Errors::WorkflowError` (or any other error) only stops the change in a script that
+runs before it:
+
+* `before_save` and `before_destroy` refuse the save or the destroy, and the message is shown to the user.
+* `after_save` and `after_destroy` run when the record is already written: the error is logged and the save or the
+  destroy goes through. The user does not see the message, so put checks in `before_save`/`before_destroy`.
+* `before_add` of collections (group users, project files, wiki page attachments) logs the error but cannot stop the
+  add. Only issue attachments are refused, because the issue's own save is refused. Put such checks in the
+  `before_save` of the object instead (e.g. the attachment or the group).
+
 Enabling custom workflows for projects
 --------------------------------------
 
