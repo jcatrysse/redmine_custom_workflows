@@ -21,6 +21,16 @@ module RedmineCustomWorkflows
   module Test
     # Test case base class
     class TestCase < ActionDispatch::IntegrationTest
+      # Only the test methods written in the test classes. A test that includes the route helpers has them as public
+      # methods, and Minitest runs whatever starts with test_: core's test_email_path/_url, and the test_* routes of
+      # other plugins, which error when called without arguments and stop the run.
+      def self.runnable_methods
+        own = ancestors.take_while { |a| a != RedmineCustomWorkflows::Test::TestCase }
+                       .select { |a| a.is_a?(Class) }
+                       .flat_map { |a| a.public_instance_methods(false).map(&:to_s) }
+        super & own
+      end
+
       def initialize(name)
         super
         # Load all plugin's fixtures

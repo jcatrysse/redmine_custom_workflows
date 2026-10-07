@@ -38,6 +38,12 @@ class GroupControllerPatchTest < RedmineCustomWorkflows::Test::TestCase
     assert_equal 'Custom workflow', @controller.flash[:notice]
   end
 
+  def test_route_helpers_are_not_run_as_tests
+    assert_respond_to self, :test_email_path
+    assert_not_includes self.class.runnable_methods, 'test_email_path'
+    assert_includes self.class.runnable_methods, 'test_update_with_cw'
+  end
+
   def test_cw_env
     @request.headers['Referer'] = edit_group_path(id: @group10.id)
     put "/groups/#{@group10.id}/", params: { group: { name: 'Updated name' } }
