@@ -31,3 +31,10 @@ What to do:
 7. Update Status, the inventory, the work list and "After the upgrade". Push `redmine70-migration` after every commit.
 8. These decisions are final; do not stop to ask about them. If one turns out to be impossible, write down why in the plan and carry on with the rest.
 9. End with a short report in Dutch: per decision what you did (commit), test numbers, e2e numbers (scenarios, screenshots, problems), the review result, what is left for Jan.
+
+## Round 2, decided by Jan on 2026-10-07 (evening)
+
+Jan answered these follow-up questions from the migration report the same way, one at a time, in the coordinating session.
+
+- redmine_custom_workflows-n2-1 (custom_wf 4): Er is een nieuwe beheertaak die de opgeslagen scripts van productie controleert op dingen die in Redmine 7 niet meer werken. Ze leest alleen en verandert niets. Houden we die taak in de plugin?
+  Jan chose: "Houden" (Zo kunnen de productiescripts vóór de overstap gecontroleerd worden.). Already built: keep it and record the decision.
