@@ -4,9 +4,35 @@ Start a Claude Code (or Codex) session on this repository, branch `redmine70-mig
 
 > Read CLAUDE.md and docs/REDMINE7-MIGRATION.md, then carry out the Redmine 7 migration of this
 > plugin as described there, on branch redmine70-migration. That includes the plugin's tests on
-> PostgreSQL and MariaDB, every function exercised end to end on a real running Redmine in a
+> PostgreSQL, every function exercised end to end on a real running Redmine in a
 > browser (with and without permissions, failure paths included) with screenshots you looked at,
 > and an OpenAI review of the diff when OPENAI_API_KEY is set. Report to me in Dutch at the end.
+
+## Decided by Jan
+
+General decisions (2026-10-07, for every GEOxyz plugin):
+
+- GEOxyz goes straight to Redmine 7: no backports to 5.1. Nothing is cherry-picked to the default branch or to the
+  branch production runs today; `redmine70-migration` is what goes live with Redmine 7. Redmine 5.1 compatibility is
+  no longer a requirement; no code paths that exist only for 5.1.
+- GEOxyz does not use MariaDB or MySQL; production runs PostgreSQL 16. Tests and the e2e set run on PostgreSQL only.
+  SQL stays portable where that costs nothing; a MariaDB-only problem is a note here, not a blocker.
+- A plugin that depends on deface requires it without a version constraint. (This plugin does not use deface.)
+- A Redmine core method that other installed plugins also patch is patched with `prepend`, never with
+  `alias_method`. (This plugin has no `alias_method`: models and controllers are patched with `prepend`, the project
+  settings tab through a helper module that calls `super`. Checked 2026-10-07, see "Together" in Results.)
+- GitHub Actions stay manual only (`workflow_dispatch`).
+
+Decisions for this plugin (2026-10-07):
+
+1. **q1, failing after_save/after_destroy script**: A, "Zoals vandaag: fout loggen, opslaan gaat door" (Gebruikers
+   merken geen verschil met 5.x, maar zien de melding van zo'n script niet, dus controles horen in een script dat vóór
+   het opslaan loopt.). Already built in dbdcf48; nothing more to do.
+2. **q2, collection before_add cannot refuse** (group users, project files, wiki attachments): A, "Zo laten en
+   documenteren" (Er verandert niets voor gebruikers; wie wil weigeren, zet die controle in het script dat bij het
+   opslaan loopt.). Nothing changed in code; documented in README and in "After the upgrade".
+3. **q3, report the four bugs upstream**: B, "Niet melden" (Geen extern contact; de oplossingen blijven alleen in de
+   GEOxyz-versie.). Nothing reported; the fixes stay in this branch only.
 
 This file is the plan and the memory of that work. Update it as you go: verdicts, results,
 what is left. Written 2026-10-06 from a measured analysis (report at the bottom).
@@ -24,7 +50,8 @@ what is left. Written 2026-10-06 from a measured analysis (report at the bottom)
 | Complexity (1 trivial .. 5 rewrite) | 2 |
 | Measured on | Redmine 7.0-stable-GEOxyz @ 8067e23 (7.0.1), Rails 8.1.3.1, Ruby 3.3.6, PostgreSQL 16.15 and MariaDB 10.11.14; before: Redmine 5.1-stable @ 16eb9e6 (5.1.13) with 0398974 |
 | Branch head | see `git log`; last full verification on the commit that updated this file |
-| 5.1 compatibility | not applicable: the 3.1 line requires Redmine 6.0+ (`requires_redmine version_or_higher: '6.0.0'`) |
+| 5.1 compatibility | not a requirement (decided 2026-10-07); the 3.1 line requires Redmine 6.0+ anyway |
+| Database | PostgreSQL 16 only (decided 2026-10-07); the MariaDB run of 2026-10-06 is kept as a note |
 
 ### Results (2026-10-06, measured in this session)
 
@@ -168,19 +195,11 @@ Behaviour recorded, not changed (the same on 2.1.3, measured in the before run):
 
 ## Open questions for Jan
 
-1. **after_save/after_destroy failures** (built: option b). (a) keep 3.1.1: a failing after_* script gives HTTP 500
-   and rolls back the save; (b) 2.x behaviour: log it and save (built, dbdcf48); (c) report upstream. Recommendation:
-   keep (b) and report it upstream (anteo/redmine_custom_workflows): the change came from a RuboCop rename, not from a
-   feature request. Not reported from here (external).
-2. **Collection before_add cannot refuse** (group users, project files, wiki page attachments): same on 2.1.3.
-   Options: (a) leave and document (built: nothing changed); (b) make a failing before_add raise so Rails stops the
-   add (behaviour change, users would get an error page or a silent rollback depending on the controller).
-   Recommendation: (a); scripts that must refuse should check in the before_save of the object.
-3. **New rake task** `redmine:custom_workflows:audit` (read-only, no setting, no schema change). Recommendation: keep;
-   it is how the production scripts get audited before the switch.
-4. **Upstream reports**: the after_save 500 and the attachment callback order (c425ebf) are upstream bugs in 3.1.x;
-   the import NOT NULL failure and the settings tab are upstream bugs since 2.x. Recommendation: report all four
-   upstream with the tests from this branch.
+Decided 2026-10-07 (see "Decided by Jan" at the top): q1 after_* failures (A), q2 collection before_add (A),
+q3 upstream reports (B, not reported). Still open:
+
+1. **New rake task** `redmine:custom_workflows:audit` (read-only, no setting, no schema change). Options: keep / drop.
+   Recommendation: keep; it is how the production scripts get audited before the switch.
 
 ## GEOxyz changes to review or re-apply
 
@@ -234,7 +253,7 @@ results quoted in the analysis come from it.
 1. **Start**: `git fetch && git checkout redmine70-migration && git pull`. Read this whole file,
    including the analysis report at the bottom. Do not reopen decisions recorded here.
 2. **Baseline, before you change anything**:
-   - the plugin's tests on Redmine 7.0-stable-GEOxyz with PostgreSQL and with MariaDB;
+   - the plugin's tests on Redmine 7.0-stable-GEOxyz with PostgreSQL;
    - a real running Redmine with this plugin (`./.codex/start_server.sh`) and the browser run
      (`./.codex/e2e.sh`: smoke over every page the plugin adds, plus the core issue flows).
    Write the numbers here. Something already broken now is a finding, not your regression.
@@ -246,9 +265,9 @@ results quoted in the analysis come from it.
 4. **GEOxyz changes**: go through the table above, one item at a time. Each kept or re-made change
    is its own commit with a test that proves it. Record the verdict in the table.
 5. **Work list**: then the numbered list, in order. One concern per commit.
-6. **Portability**: everything must run on Redmine's supported databases (PostgreSQL,
-   MySQL/MariaDB; SQLite where the plugin already supports it). Migrations must be reversible and
-   are run down and up on PostgreSQL and MariaDB.
+6. **Portability**: GEOxyz runs PostgreSQL 16 only (decided 2026-10-07). Keep SQL portable where that
+   costs nothing; a MariaDB-only problem is a note here, not a blocker. Migrations must be reversible and
+   are run down and up on PostgreSQL.
 7. **Together**: run with the other GEOxyz plugins installed (the migration kit's harness, or
    `RMP_EXTRA_PLUGINS`). A failure that only appears in combination is a finding to record here.
 8. **End to end, visually, every function**: on the real Redmine from `start_server.sh`
@@ -266,8 +285,7 @@ results quoted in the analysis come from it.
      them against the same running instance (mails land in `redmine/tmp/mails`, `t.mails()`
      reads them; API through `t.page.request`) and record command and result.
    - Before pictures where behaviour or layout changes: the branch GEOxyz runs today, on
-     Redmine 5.1, same scenarios, `RMP_E2E_OUT=docs/e2e/before`.
-   - Run the whole e2e set once on MariaDB as well (`RMP_DB=mariadb`, then `start_server.sh --reset`).
+     Redmine 5.1, same scenarios, `RMP_E2E_OUT=docs/e2e/before` (evidence only; no 5.1 support).
 9. **Independent review**: first your own, adversarial: re-read the whole diff as if someone
    else wrote it and you are paid to reject it. Then, **when `OPENAI_API_KEY` is set in the
    session**, `./.codex/openai_review.sh`: it sends the diff of this branch to an OpenAI model
@@ -278,7 +296,7 @@ results quoted in the analysis come from it.
 10. **After the upgrade**: anything the production upgrade must do for this plugin (data fixes,
     settings, cron, files, removed features) goes into the section "After the upgrade".
 11. **Finish**: update "Status", the inventory and the work list in this file, push
-    `redmine70-migration`, and report: what changed, test numbers on both databases, e2e
+    `redmine70-migration`, and report: what changed, test numbers on PostgreSQL, e2e
     numbers (scenarios, screenshots, problems), the review result, what is left, what needs Jan.
 
 ### Stop and ask Jan when
@@ -291,7 +309,8 @@ results quoted in the analysis come from it.
 ## Rules
 
 - **Target**: Redmine 7.0-stable-GEOxyz (https://github.com/jcatrysse/redmine), Rails 8.1, Ruby 3.3+.
-  Core sources for comparison: branches `5.1-stable`, `6.1-stable`, `7.0-stable`, `7.0-stable-GEOxyz`.
+  Core sources for comparison: branches `7.0-stable`, `7.0-stable-GEOxyz` (`5.1-stable`, `6.1-stable` only to
+  understand old behaviour). Database: PostgreSQL 16 (decided 2026-10-07).
 - **Evidence**: never report a test, lint, browser check or review as passed without having seen
   it. Quote the summary lines; list the screenshots. "Should work" is not a result, and a green
   test suite is not proof that a feature works in the browser.
@@ -312,8 +331,10 @@ results quoted in the analysis come from it.
   (on by default: `t.sudo()` in a scenario). The breaker list is in the migration kit's CHECKLIST.md.
 - **Locales**: keep the locales the plugin ships in sync; translate a new key by matching the
   closest existing key in the same file, not from scratch; do not add new languages.
-- **5.1 compatibility**: prefer fixes that also run on Redmine 5.1 so they can be merged early;
-  say so when a fix cannot.
+- **No 5.1 backports** (decided 2026-10-07): Redmine 5.1 compatibility is not a requirement; do not add code
+  paths that exist only for 5.1. Nothing is cherry-picked to the default branch or the production branch.
+- **Patching core**: a core method that other plugins also patch is patched with `prepend`, never with
+  `alias_method` (mixing both recurses). A plugin that needs deface requires it without a version constraint.
 - **Git**: work on `redmine70-migration` only; never push to the default branch; never force-push
   a branch someone else uses. Descriptive commit messages (what and why). Push after every
   commit, together with the updated status in this file: a cloud session can stop at a usage
@@ -324,7 +345,7 @@ results quoted in the analysis come from it.
 ## Definition of done
 
 - All items of the work list are done or explicitly deferred with a reason, in this file.
-- The plugin's tests are green on Redmine 7.0-stable-GEOxyz with PostgreSQL and MariaDB
+- The plugin's tests are green on Redmine 7.0-stable-GEOxyz with PostgreSQL
   (numbers in this file); boot, production-like eager load, migrations up/down OK.
 - Every function in the inventory exercised end to end on a real running Redmine, with and
   without permissions and on its failure paths; `./.codex/e2e.sh` green; screenshots looked at,

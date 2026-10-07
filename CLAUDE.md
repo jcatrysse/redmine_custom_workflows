@@ -19,7 +19,9 @@ the measured state, the work list and the rules. Work on branch `redmine70-migra
 - Minimal diffs in this plugin's style; no reformatting, no drive-by refactoring.
 - Authorization on every action, `safe_attributes` instead of mass assignment, no SQL from
   params, no secrets in logs, no `html_safe` on user input.
-- PostgreSQL and MySQL/MariaDB both supported; migrations reversible.
+- PostgreSQL 16 only (decided by Jan 2026-10-07; keep SQL portable where it costs nothing); migrations reversible.
+- No Redmine 5.1 backports or 5.1-only code paths (decided by Jan 2026-10-07).
+- Core methods other plugins also patch: `prepend`, never `alias_method`.
 - I18n for every user-visible string; keep the shipped locales in sync, translated by matching
   existing keys in the same file; no new languages.
 - Compare with Redmine core before patching it: https://github.com/jcatrysse/redmine
