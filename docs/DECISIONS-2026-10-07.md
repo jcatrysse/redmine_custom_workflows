@@ -38,3 +38,9 @@ Jan answered these follow-up questions from the migration report the same way, o
 
 - redmine_custom_workflows-n2-1 (custom_wf 4): Er is een nieuwe beheertaak die de opgeslagen scripts van productie controleert op dingen die in Redmine 7 niet meer werken. Ze leest alleen en verandert niets. Houden we die taak in de plugin?
   Jan chose: "Houden" (Zo kunnen de productiescripts vóór de overstap gecontroleerd worden.). Already built: keep it and record the decision.
+
+## Round 6, 2026-10-12: the follow-up points of the plan
+
+Jan answered the open points this session recorded in docs/REDMINE7-MIGRATION.md after the earlier rounds, one by one in the coordinating session.
+
+- New rake task `redmine:custom_workflows:audit`: **keep**. It is the pre-upgrade audit step in the production action list.
