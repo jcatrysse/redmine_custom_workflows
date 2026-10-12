@@ -243,6 +243,7 @@ q3 upstream reports (B, not reported). Still open:
 
 1. **New rake task** `redmine:custom_workflows:audit` (read-only, no setting, no schema change). Options: keep / drop.
    Recommendation: keep; it is how the production scripts get audited before the switch.
+   **Decided by Jan, 2026-10-12: keep** (round 6 in `docs/DECISIONS-2026-10-07.md`).
 
 ## GEOxyz changes to review or re-apply
 
