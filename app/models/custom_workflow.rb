@@ -36,8 +36,8 @@ class CustomWorkflow < ApplicationRecord
   validate :validate_syntax, :validate_scripts_presence,
            if: proc { |workflow| workflow.respond_to?(:observable) and workflow.active? }
 
-  after_save :forget_active_observables
   after_destroy :forget_active_observables
+  after_save :forget_active_observables
 
   scope :active, -> { where(active: true) }
   scope :sorted, -> { order(:position) }
