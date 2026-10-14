@@ -81,6 +81,14 @@ Findings with all 30 public plugins installed (none caused by this plugin; this 
 - **Issue pages 403 for core roles**: redmine_view_issue_description refuses issue details to a role without its own
   permission (`vid_authorize_issue_detail`), by design. With it installed the core Reporter (kit `core.mjs`) and this
   plugin's fixture role get 403 on `/issues/1`; GEOxyz roles need that permission.
+  Combined run of 2026-10-14 (44 plugins): 4 IssuesControllerPatchTest failures (403) from this. Fixed in ea5cc9b: the
+  test base grants `view_issue_description` to the fixture roles when that plugin is installed; measured 108 runs,
+  279 assertions, 0 failures with it installed.
+- **Smoke: `/custom_workflows/1/export` HTTP 0** (combined run 2026-10-14): a download, not a server error. This
+  repository's kit already handles it (e3439a8: smoke fetches a download route through the request API, 200); the
+  combined harness still reports it with its own smoke.
+- **Harness H6, `configuration.yml` under `default:`**: fixed in this repository's kit in 572775f (written for
+  `$RMP_SERVER_ENV`; the mailer test also forces `:test` delivery).
 - **Route helpers named `test_*`** (redmine_ldap_sync `test_ldap_setting`, redmine_reporter_dashboards
   `test_send_project_reporter_schedule`, redmine_ai_summary): Minitest ran them as tests in this plugin's
   integration test that includes the route helpers, they errored, and a shoulda-context reporter from another bundle
