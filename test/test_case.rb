@@ -26,7 +26,7 @@ module RedmineCustomWorkflows
       # other plugins, which error when called without arguments and stop the run.
       def self.runnable_methods
         own = ancestors.take_while { |a| a != RedmineCustomWorkflows::Test::TestCase }
-                       .select { |a| a.is_a?(Class) }
+                       .grep(Class)
                        .flat_map { |a| a.public_instance_methods(false).map(&:to_s) }
         super & own
       end
