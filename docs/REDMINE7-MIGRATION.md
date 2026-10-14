@@ -115,8 +115,10 @@ destroyed. Test: `test/unit/workflow_lookup_test.rb` (equal custom_workflows que
   runs on 5.1; production runs 0398974 (2.1.3), which has the same lookups. The same change for 0398974 is in
   `docs/patches/2.1.3-workflow-lookup-cache.patch` (applies cleanly with `git am` on 0398974; built on a local branch
   `perf/member-workflow-cache`, not pushed: this session may push `redmine70-migration` only). Tested on Redmine
-  5.1-stable-GEOxyz (bcf917c): 68 runs, 112 assertions, 0 failures; the lookup test fails without the change. Jan
-  applies it to the production branch himself.
+  5.1-stable-GEOxyz (bcf917c): 68 runs, 112 assertions, 0 failures; the lookup test fails without the change.
+- **Decided by Jan, 2026-10-14: the cache stays out of production; it ships with the 7.0 version only.** The 2.1.3
+  patch stays in `docs/patches/` as reference, not applied; the local branch `perf/member-workflow-cache` is not
+  pushed.
 
 ### Results (2026-10-06, measured in this session)
 

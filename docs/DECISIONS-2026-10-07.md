@@ -44,3 +44,9 @@ Jan answered these follow-up questions from the migration report the same way, o
 Jan answered the open points this session recorded in docs/REDMINE7-MIGRATION.md after the earlier rounds, one by one in the coordinating session.
 
 - New rake task `redmine:custom_workflows:audit`: **keep**. It is the pre-upgrade audit step in the production action list.
+
+## 2026-10-14: workflow lookup cache
+
+- Performance fix for the "is there any workflow" lookup per saved record (619d66d on this branch): Jan decided it
+  stays out of production and ships with the 7.0 version only. `docs/patches/2.1.3-workflow-lookup-cache.patch`
+  stays as reference, marked not applied; the local branch `perf/member-workflow-cache` is not pushed.
