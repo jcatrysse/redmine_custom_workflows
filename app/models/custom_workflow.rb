@@ -36,6 +36,9 @@ class CustomWorkflow < ApplicationRecord
   validate :validate_syntax, :validate_scripts_presence,
            if: proc { |workflow| workflow.respond_to?(:observable) and workflow.active? }
 
+  after_save :forget_active_observables
+  after_destroy :forget_active_observables
+
   scope :active, -> { where(active: true) }
   scope :sorted, -> { order(:position) }
   scope :for_project, (lambda do |project|
@@ -72,9 +75,23 @@ class CustomWorkflow < ApplicationRecord
     Rails.logger.info "#{str} for #{object.class} (##{object.id}) \"#{object}\""
   end
 
+  # Whether any active workflow observes this observable. Asked for every record that is saved, so a bulk change (a
+  # group of users added to a project saves one member per user) would ask the database each time; the answer is kept
+  # per request or job (Current is reset between them), at most a minute in other long-running processes, and
+  # forgotten as soon as a workflow is saved or destroyed.
+  def self.active_observable?(observable)
+    now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    cache = RedmineCustomWorkflows::Current.active_observables
+    unless cache && now - cache[:at] < 60
+      cache = { at: now, list: active.distinct.pluck(:observable) }
+      RedmineCustomWorkflows::Current.active_observables = cache
+    end
+    cache[:list].include? observable.to_s
+  end
+
   def self.run_shared_code?(object)
     # Due to DB migration
-    if CustomWorkflow.table_exists? && CustomWorkflow.active.exists?(observable: :shared)
+    if CustomWorkflow.table_exists? && CustomWorkflow.active_observable?(:shared)
       log_message '= Running shared code', object
       CustomWorkflow.active.where(observable: :shared).sorted.each do |workflow|
         unless workflow.run(object, :shared_code)
@@ -89,16 +106,19 @@ class CustomWorkflow < ApplicationRecord
 
   def self.run_custom_workflows?(observable, object, event)
     if CustomWorkflow.table_exists? # Due to DB migration
+      return true unless CustomWorkflow.active_observable?(observable)
+
       workflows = CustomWorkflow.active.where(observable: observable)
       if PROJECT_OBSERVABLES.include? observable
         return true unless object.project
 
         workflows = workflows.for_project(object.project)
       end
-      return true unless workflows.any?
+      workflows = workflows.sorted.to_a
+      return true if workflows.empty?
 
       log_message "= Running #{event} custom workflows", object
-      workflows.sorted.each do |workflow|
+      workflows.each do |workflow|
         unless workflow.run(object, event)
           log_message "= Abort running #{event} custom workflows", object
           return false
@@ -193,6 +213,10 @@ class CustomWorkflow < ApplicationRecord
     attrs['ruby-version'] = "#{RUBY_VERSION}-p#{RUBY_PATCHLEVEL}"
     attrs['rails-version'] = Rails::VERSION::STRING
     attrs.to_xml
+  end
+
+  def forget_active_observables
+    RedmineCustomWorkflows::Current.active_observables = nil
   end
 
   def <=>(other)
