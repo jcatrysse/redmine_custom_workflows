@@ -94,6 +94,30 @@ Findings with all 30 public plugins installed (none caused by this plugin; this 
   integration test that includes the route helpers, they errored, and a shoulda-context reporter from another bundle
   aborted the run. Fixed on this side in 0d78541.
 
+### Performance: workflow lookup per saved record (2026-10-14, approved by Jan for 7.0 and production)
+
+Combined-run finding: adding a group of 1000 users to a project saved 1000 members, and for each the plugin asked
+the database whether any member workflow or shared code exists (3 queries per member save, 2 per destroy).
+`CustomWorkflow.active_observable?` now answers that once per request or job (`RedmineCustomWorkflows::Current`,
+reset by Rails), at most a minute in other long-running processes, and forgets it whenever a workflow is saved or
+destroyed. Test: `test/unit/workflow_lookup_test.rb` (equal custom_workflows query counts for 2 and 4 member saves;
+12 vs 24 before; a member workflow and shared code added after a first save still run).
+
+| measured (group of 1000 users added to one project, rolled back) | before | after |
+|---|---|---|
+| 7.0-stable-GEOxyz, only an issue workflow active | 10,009 queries (custom_workflows 3,003), 7.3 s | 7,007 (1), 6.0 s |
+| 7.0-stable-GEOxyz, e2e seed (member and shared workflows active) | 13,012 (6,006), 11.1 s | 10,010 (3,004), 8.6 s |
+| 5.1-stable-GEOxyz with 2.1.3, only an issue workflow active | 11,010 (3,003), 9.7 s | 8,008 (1), 6.3 s |
+
+- 7.0: 619d66d on this branch. Suite alone 111 runs, 293 assertions, 0 failures; with 26 other GEOxyz plugins
+  (redmine_view_issue_description included) the same; e2e 11 scripts, 108 screenshots, 0 problems.
+- Production (5.1): `origin/master` and `origin/5.x` are both v3.1.1 (requires Redmine 6.0+), so neither can be what
+  runs on 5.1; production runs 0398974 (2.1.3), which has the same lookups. The same change for 0398974 is in
+  `docs/patches/2.1.3-workflow-lookup-cache.patch` (applies cleanly with `git am` on 0398974; built on a local branch
+  `perf/member-workflow-cache`, not pushed: this session may push `redmine70-migration` only). Tested on Redmine
+  5.1-stable-GEOxyz (bcf917c): 68 runs, 112 assertions, 0 failures; the lookup test fails without the change. Jan
+  applies it to the production branch himself.
+
 ### Results (2026-10-06, measured in this session)
 
 | check | PostgreSQL 16 | MariaDB 10.11 |
