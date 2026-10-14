@@ -47,6 +47,11 @@ module RedmineCustomWorkflows
         @admin = User.find_by(login: 'admin')
         @project1 = Project.find 1
         User.current = nil
+        # With redmine_view_issue_description installed (GEOxyz), an issue page needs that plugin's permission; the
+        # fixture roles predate it, so give it to them as GEOxyz roles have it
+        return unless Redmine::Plugin.installed?(:redmine_view_issue_description)
+
+        Role.givable.each { |role| role.add_permission! :view_issue_description }
       end
     end
   end
